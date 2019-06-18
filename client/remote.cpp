@@ -531,7 +531,7 @@ static int build_remote_int(CompileJob &job, UseCSMsg *usecs, MsgChannel *local_
                 delete cserver;
                 cserver = 0;
                 log_warning() << "call_cpp process failed with exit status " << shell_exit_status(status) << endl;
-                return shell_exit_status(status);
+                throw remote_error(103, "Error 103 - local cpp invocation failed, trying to recompile locally");
             }
         } else {
             int cpp_fd = open(preproc_file, O_RDONLY);
@@ -584,6 +584,12 @@ static int build_remote_int(CompileJob &job, UseCSMsg *usecs, MsgChannel *local_
                 log_info() << "command needs stdout/stderr workaround, recompiling locally" << endl;
                 log_info() << "(set ICECC_CARET_WORKAROUND=0 to override)" << endl;
                 throw remote_error(102, "Error 102 - command needs stdout/stderr workaround, recompiling locally");
+            }
+
+            if (crmsg->err.find("file not found") != string::npos) {
+                delete crmsg;
+                log_info() << "remote is missing file, recompiling locally" << endl;
+                throw remote_error(103, "Error 104 - remote is missing file, recompiling locally");
             }
 
             ignore_result(write(STDOUT_FILENO, crmsg->out.c_str(), crmsg->out.size()));
